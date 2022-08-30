@@ -15,6 +15,17 @@
 #include <bluefruit.h>
 #include <Adafruit_LittleFS.h>
 #include <InternalFileSystem.h>
+#include <Wire.h>
+
+#include "MLX90640_API.h"
+#include "MLX90640_I2C_Driver.h"
+
+const byte MLX90640_address = 0x33; //Default 7-bit unshifted address of the MLX90640
+
+#define TA_SHIFT 8 //Default shift for MLX90640 in open air
+
+static float mlx90640To[768];
+paramsMLX90640 mlx90640;
 
 // BLE Service
 BLEDfu  bledfu;  // OTA DFU service
@@ -32,6 +43,7 @@ void gotoSleep(unsigned long time);
 void gotoSystemOnSleep(unsigned long time);
 void connect_callback(uint16_t conn_handle);
 void disconnect_callback(uint16_t conn_handle, uint8_t reason);
+boolean isConnected();
 
 void gotoSleep()
 {
@@ -65,6 +77,8 @@ void gotoSystemOnSleep(unsigned long time) {
 void setup()
 {
   Serial.begin(115200);
+  Wire.begin();
+  Wire.setClock(400000); //Increase I2C clock speed to 400kHz
 
 #if CFG_DEBUG
   // Blocking wait for connection when debug mode is enabled via IDE
@@ -73,6 +87,26 @@ void setup()
   
   Serial.println("Bluefruit52 BLEUART Example");
   Serial.println("---------------------------\n");
+
+  if (isConnected() == false)
+  {
+    Serial.println("MLX90640 not detected at default I2C address. Please check wiring. Freezing.");
+    while (1);
+  }
+  Serial.println("MLX90640 online!");
+
+  //Get device parameters - We only have to do this once
+  int status;
+  uint16_t eeMLX90640[832];
+  status = MLX90640_DumpEE(MLX90640_address, eeMLX90640);
+  if (status != 0)
+    Serial.println("Failed to load system parameters");
+
+  status = MLX90640_ExtractParameters(eeMLX90640, &mlx90640);
+  if (status != 0)
+    Serial.println("Parameter extraction failed");
+
+  //Once params are extracted, we can release eeMLX90640 array
 
   // Setup the BLE LED to be enabled on CONNECT
   // Note: This is actually the default behavior, but provided
@@ -142,16 +176,56 @@ void startAdv(void)
 
 void loop()
 {
-  // Forward data from HW Serial to BLEUART
-  while (Serial.available())
+    for (byte x = 0 ; x < 2 ; x++) //Read both subpages
   {
-    // Delay to wait for enough input, since we have a limited transmission buffer
-    delay(2);
+    uint16_t mlx90640Frame[834];
+    int status = MLX90640_GetFrameData(MLX90640_address, mlx90640Frame);
+    if (status < 0)
+    {
+      Serial.print("GetFrame Error: ");
+      Serial.println(status);
+    }
 
-    uint8_t buf[64];
-    int count = Serial.readBytes(buf, sizeof(buf));
-    bleuart.write( buf, count );
+    float vdd = MLX90640_GetVdd(mlx90640Frame, &mlx90640);
+    float Ta = MLX90640_GetTa(mlx90640Frame, &mlx90640);
+
+    float tr = Ta - TA_SHIFT; //Reflected temperature based on the sensor ambient temperature
+    float emissivity = 0.95;
+
+    MLX90640_CalculateTo(mlx90640Frame, &mlx90640, emissivity, tr, mlx90640To);
   }
+
+  for (int x = 0 ; x < sizeof(mlx90640To) / sizeof(mlx90640To[0]); x++)
+  {
+    char buf[16];
+
+    //Serial.print("Pixel ");
+    //Serial.print(x);
+    //Serial.print(": ");
+    //Serial.print(mlx90640To[x], 2);
+    //Serial.print("C");
+    //Serial.println();
+
+    snprintf(buf, sizeof(buf), "pix %d: %.2fC\n", x, mlx90640To[x]);
+    Serial.print(buf);
+
+    bleuart.write(buf, sizeof(buf));
+    //delay(100);
+
+
+  }
+
+
+  // Forward data from HW Serial to BLEUART
+  //while (Serial.available())
+  //{
+  //  // Delay to wait for enough input, since we have a limited transmission buffer
+  //  delay(2);
+
+  //  uint8_t buf[64];
+  //  int count = Serial.readBytes(buf, sizeof(buf));
+  //  bleuart.write( buf, count );
+  //}
 
   // Forward from BLEUART to HW Serial
   while ( bleuart.available() )
@@ -161,6 +235,7 @@ void loop()
     Serial.write(ch);
   }
 
+  delay(1000);
   //gotoSleep();
 
 }
@@ -190,4 +265,13 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason)
 
   Serial.println();
   Serial.print("Disconnected, reason = 0x"); Serial.println(reason, HEX);
+}
+
+//Returns true if the MLX90640 is detected on the I2C bus
+boolean isConnected()
+{
+  Wire.beginTransmission((uint8_t)MLX90640_address);
+  if (Wire.endTransmission() != 0)
+    return (false); //Sensor did not ACK
+  return (true);
 }
