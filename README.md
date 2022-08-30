@@ -1,5 +1,13 @@
 # nRF52840 Arduino 
 
+ボードはSwicth ScienceのISP1807 Breakoutを使用。
+
+ブートローダーはおそらくUF2？  
+書き込みの際はResetを2度押しらしい。
+
+消費電力的にはベアメタルの方が優位かもしれない。  
+その場合は、USBが使えずSWD経由での書き込みとなるため、RaspberryPipicoでSWDデバッグができるpicoprobeとやらが使えそう。
+
 ## 未対応ボード(ex.ISP1807 breakoutボード)をArduino + PlatformIOで使う
 
 1. ベースに使えそうなボードを見つける
