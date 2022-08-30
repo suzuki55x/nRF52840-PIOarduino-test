@@ -10,7 +10,9 @@
 2. ベースボードのvariantファイルを持ってくる。
 
 platformのリポジトリ(nordicnrf52。platformioのドキュメントから飛べる)から、ボード設定のJSONファイルを開く。  
-variants欄にvariantsの名前が記載されているので、該当ボードのArduinoプラットフォームのリポジトリに移動し、variantsを取得する。
+variants欄にvariantsの名前が記載されているので、該当ボードのArduinoプラットフォームのリポジトリに移動し、variantsを取得する。  
+ArduinoIDEにすでに対応されているボードについては、それを持ってくるだけでよい
+
 
 3. プロジェクト内にcustom variantを格納するディレクトリを作成し、platform.iniにて参照設定を行う
 
