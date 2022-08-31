@@ -45,34 +45,39 @@ void connect_callback(uint16_t conn_handle);
 void disconnect_callback(uint16_t conn_handle, uint8_t reason);
 boolean isConnected();
 
-void gotoSleep()
-{
-  // to reduce power consumption when sleeping, turn off all your LEDs (and other power hungry devices)
-  digitalWrite(LED_BUILTIN, HIGH);
-
-  // setup your wake-up pins.
-  pinMode(WAKE_LOW_PIN,  INPUT_PULLUP_SENSE);    // this pin (WAKE_LOW_PIN) is pulled up and wakes up the feather when externally connected to ground.
-  // pinMode(WAKE_HIGH_PIN, INPUT_PULLDOWN_SENSE);  // this pin (WAKE_HIGH_PIN) is pulled down and wakes up the feather when externally connected to 3.3v.
- 
-  // power down nrf52.
-  sd_power_system_off();                              // this function puts the whole nRF52 to deep sleep (no Bluetooth).  If no sense pins are setup (or other hardware interrupts), the nrf52 will not wake up.
-}
-
-void gotoSystemOnSleep(unsigned long time) {
-  // shutdown when time reaches SLEEPING_DELAY ms
-  if ((time>SLEEPING_DELAY))
-  {
-
-    // to reduce power consumption when sleeping, turn off all your LEDs (and other power hungry devices)
-    digitalWrite(LED_BUILTIN, HIGH);
+boolean is_sleeping = false;
+boolean is_connected_ble = false;
 
 
-    sd_app_evt_wait();
-
-    __NVIC_SystemReset();
+extern "C" void TIMER2_IRQHandler(void) {
+  if ((NRF_TIMER2->EVENTS_COMPARE[0] != 0) &&
+      ((NRF_TIMER2->INTENSET & TIMER_INTENSET_COMPARE0_Msk) != 0)) {
+    NRF_TIMER2->EVENTS_COMPARE[0] = 0;  // Clear compare register 0 event
   }
+  is_sleeping = false;
+  Serial.println("good morning!");
 }
 
+void startTimer(unsigned long us) {
+  NRF_TIMER2->TASKS_STOP = 1;
+  NRF_TIMER2->MODE = TIMER_MODE_MODE_Timer;  // Set the timer in Counter Mode
+  NRF_TIMER2->TASKS_CLEAR = 1;  // clear the task first to be usable for later
+  NRF_TIMER2->PRESCALER = 4;    // Set prescaler. Higher number gives slower
+                                // timer.
+  NRF_TIMER2->BITMODE = TIMER_BITMODE_BITMODE_32Bit
+                        << TIMER_BITMODE_BITMODE_Pos;
+  NRF_TIMER2->CC[0] = us;  // Set value for TIMER2 compare register 0
+
+  // Enable interrupt on Timer 2, both for CC[0] and CC[1] compare match events
+  NRF_TIMER2->INTENSET = TIMER_INTENSET_COMPARE0_Enabled
+                         << TIMER_INTENSET_COMPARE0_Pos;
+  // Clear the timer when COMPARE0 event is triggered
+  NRF_TIMER2->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Enabled
+                       << TIMER_SHORTS_COMPARE0_CLEAR_Pos;
+
+  NRF_TIMER2->TASKS_START = 1;  // Start TIMER
+  NVIC_EnableIRQ(TIMER2_IRQn);
+}
 
 void setup()
 {
@@ -176,7 +181,9 @@ void startAdv(void)
 
 void loop()
 {
-    for (byte x = 0 ; x < 2 ; x++) //Read both subpages
+  digitalWrite(LED_BUILTIN, LOW);
+
+  for (byte x = 0 ; x < 2 ; x++) //Read both subpages
   {
     uint16_t mlx90640Frame[834];
     int status = MLX90640_GetFrameData(MLX90640_address, mlx90640Frame);
@@ -209,9 +216,18 @@ void loop()
     snprintf(buf, sizeof(buf), "pix %d: %.2fC\n", x, mlx90640To[x]);
     Serial.print(buf);
 
-    bleuart.write(buf, sizeof(buf));
-    //delay(100);
+    if(is_connected_ble) {
 
+      bleuart.write(buf, sizeof(buf));
+      //delay(100);
+
+      if(x == (sizeof(mlx90640To) / sizeof(mlx90640To[0])) -1) {
+        delay(1000);
+        is_sleeping = true;
+
+        startTimer(10 * 1000 * 1000);
+      }
+    }
 
   }
 
@@ -236,7 +252,17 @@ void loop()
   }
 
   delay(1000);
+  digitalWrite(LED_BUILTIN, HIGH);
   //gotoSleep();
+  if(is_sleeping) {
+    Serial.println("good night!!!!!");
+    delay(100);
+  }
+  while(is_sleeping) {
+    __WFE();
+    __SEV();
+    __WFE();
+  }
 
 }
 
@@ -251,6 +277,8 @@ void connect_callback(uint16_t conn_handle)
 
   Serial.print("Connected to ");
   Serial.println(central_name);
+
+  is_connected_ble = true;
 }
 
 /**
@@ -265,6 +293,8 @@ void disconnect_callback(uint16_t conn_handle, uint8_t reason)
 
   Serial.println();
   Serial.print("Disconnected, reason = 0x"); Serial.println(reason, HEX);
+
+  is_connected_ble = false;
 }
 
 //Returns true if the MLX90640 is detected on the I2C bus
