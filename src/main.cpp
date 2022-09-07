@@ -204,7 +204,7 @@ void loop()
 
   for (int x = 0 ; x < sizeof(mlx90640To) / sizeof(mlx90640To[0]); x++)
   {
-    char buf[16];
+    char buf[17];
 
     //Serial.print("Pixel ");
     //Serial.print(x);
@@ -213,7 +213,7 @@ void loop()
     //Serial.print("C");
     //Serial.println();
 
-    snprintf(buf, sizeof(buf), "pix %d: %.2fC\n", x, mlx90640To[x]);
+    snprintf(buf, sizeof(buf), "pix %03d: %5.2fC\n", x, mlx90640To[x]);
     Serial.print(buf);
 
     if(is_connected_ble) {
