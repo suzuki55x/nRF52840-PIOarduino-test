@@ -84,6 +84,13 @@ void setup()
 
   // sleep before BLE Advertisement
   delay(1000*10);
+  is_sleeping = true;
+  startTimer(10 * 1000 * 1000);
+  while(is_sleeping) {
+    __SEV();
+    __WFE();
+    __WFE();
+  }
 
   Serial.begin(115200);
   Serial.println("wakeUp\n");
