@@ -81,7 +81,12 @@ void startTimer(unsigned long us) {
 
 void setup()
 {
+
+  // sleep before BLE Advertisement
+  delay(1000*10);
+
   Serial.begin(115200);
+  Serial.println("wakeUp\n");
   //Wire.begin();
   //Wire.setClock(400000); //Increase I2C clock speed to 400kHz
 
@@ -92,10 +97,6 @@ void setup()
   
   Serial.println("Bluefruit52 BLEUART Example");
   Serial.println("---------------------------\n");
-
-  // sleep before BLE Advertisement
-  delay(1000*10);
-  Serial.println("wakeUp\n");
 
   //if (isConnected() == false)
   //{
