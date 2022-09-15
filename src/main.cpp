@@ -93,6 +93,10 @@ void setup()
   Serial.println("Bluefruit52 BLEUART Example");
   Serial.println("---------------------------\n");
 
+  // sleep before BLE Advertisement
+  delay(1000*10);
+  Serial.println("wakeUp\n");
+
   //if (isConnected() == false)
   //{
   //  Serial.println("MLX90640 not detected at default I2C address. Please check wiring. Freezing.");
@@ -260,11 +264,13 @@ void loop()
   }
 
   delay(1000);
+
   digitalWrite(LED_BUILTIN, HIGH);
   //gotoSleep();
   if(is_sleeping) {
     Serial.println("good night!!!!!");
     delay(100);
+    NVIC_SystemReset();
     //systemOff(PIN_BUTTON1, WAKE_LOW_PIN);
   }
   while(is_sleeping) {
