@@ -82,8 +82,8 @@ void startTimer(unsigned long us) {
 void setup()
 {
   Serial.begin(115200);
-  Wire.begin();
-  Wire.setClock(400000); //Increase I2C clock speed to 400kHz
+  //Wire.begin();
+  //Wire.setClock(400000); //Increase I2C clock speed to 400kHz
 
 #if CFG_DEBUG
   // Blocking wait for connection when debug mode is enabled via IDE
@@ -93,23 +93,23 @@ void setup()
   Serial.println("Bluefruit52 BLEUART Example");
   Serial.println("---------------------------\n");
 
-  if (isConnected() == false)
-  {
-    Serial.println("MLX90640 not detected at default I2C address. Please check wiring. Freezing.");
-    while (1);
-  }
-  Serial.println("MLX90640 online!");
+  //if (isConnected() == false)
+  //{
+  //  Serial.println("MLX90640 not detected at default I2C address. Please check wiring. Freezing.");
+  //  while (1);
+  //}
+  //Serial.println("MLX90640 online!");
 
   //Get device parameters - We only have to do this once
-  int status;
-  uint16_t eeMLX90640[832];
-  status = MLX90640_DumpEE(MLX90640_address, eeMLX90640);
-  if (status != 0)
-    Serial.println("Failed to load system parameters");
+  //int status;
+  //uint16_t eeMLX90640[832];
+  //status = MLX90640_DumpEE(MLX90640_address, eeMLX90640);
+  //if (status != 0)
+  //  Serial.println("Failed to load system parameters");
 
-  status = MLX90640_ExtractParameters(eeMLX90640, &mlx90640);
-  if (status != 0)
-    Serial.println("Parameter extraction failed");
+  //status = MLX90640_ExtractParameters(eeMLX90640, &mlx90640);
+  //if (status != 0)
+  //  Serial.println("Parameter extraction failed");
 
   //Once params are extracted, we can release eeMLX90640 array
 
@@ -183,53 +183,61 @@ void loop()
 {
   digitalWrite(LED_BUILTIN, LOW);
 
-  for (byte x = 0 ; x < 2 ; x++) //Read both subpages
-  {
-    uint16_t mlx90640Frame[834];
-    int status = MLX90640_GetFrameData(MLX90640_address, mlx90640Frame);
-    if (status < 0)
-    {
-      Serial.print("GetFrame Error: ");
-      Serial.println(status);
-    }
+  //for (byte x = 0 ; x < 2 ; x++) //Read both subpages
+  //{
+  //  uint16_t mlx90640Frame[834];
+  //  int status = MLX90640_GetFrameData(MLX90640_address, mlx90640Frame);
+  //  if (status < 0)
+  //  {
+  //    Serial.print("GetFrame Error: ");
+  //    Serial.println(status);
+  //  }
 
-    float vdd = MLX90640_GetVdd(mlx90640Frame, &mlx90640);
-    float Ta = MLX90640_GetTa(mlx90640Frame, &mlx90640);
+  //  float vdd = MLX90640_GetVdd(mlx90640Frame, &mlx90640);
+  //  float Ta = MLX90640_GetTa(mlx90640Frame, &mlx90640);
 
-    float tr = Ta - TA_SHIFT; //Reflected temperature based on the sensor ambient temperature
-    float emissivity = 0.95;
+  //  float tr = Ta - TA_SHIFT; //Reflected temperature based on the sensor ambient temperature
+  //  float emissivity = 0.95;
 
-    MLX90640_CalculateTo(mlx90640Frame, &mlx90640, emissivity, tr, mlx90640To);
-  }
+  //  MLX90640_CalculateTo(mlx90640Frame, &mlx90640, emissivity, tr, mlx90640To);
+  //}
 
-  for (int x = 0 ; x < sizeof(mlx90640To) / sizeof(mlx90640To[0]); x++)
-  {
-    char buf[17];
+  //for (int x = 0 ; x < sizeof(mlx90640To) / sizeof(mlx90640To[0]); x++)
+  //{
+  //  char buf[17];
 
-    //Serial.print("Pixel ");
-    //Serial.print(x);
-    //Serial.print(": ");
-    //Serial.print(mlx90640To[x], 2);
-    //Serial.print("C");
-    //Serial.println();
+  //  //Serial.print("Pixel ");
+  //  //Serial.print(x);
+  //  //Serial.print(": ");
+  //  //Serial.print(mlx90640To[x], 2);
+  //  //Serial.print("C");
+  //  //Serial.println();
 
-    snprintf(buf, sizeof(buf), "pix %03d: %5.2fC\n", x, mlx90640To[x]);
-    Serial.print(buf);
+  //  snprintf(buf, sizeof(buf), "pix %03d: %5.2fC\n", x, mlx90640To[x]);
+  //  Serial.print(buf);
 
+  //  if(is_connected_ble) {
+
+  //    bleuart.write(buf, sizeof(buf));
+  //    //delay(100);
+
+  //    if(x == (sizeof(mlx90640To) / sizeof(mlx90640To[0])) -1) {
+  //      delay(1000);
+  //      is_sleeping = true;
+
+  //      startTimer(10 * 1000 * 1000);
+  //    }
+  //  }
+
+  //}
     if(is_connected_ble) {
 
-      bleuart.write(buf, sizeof(buf));
-      //delay(100);
-
-      if(x == (sizeof(mlx90640To) / sizeof(mlx90640To[0])) -1) {
+      bleuart.write("test", sizeof("test"));
         delay(1000);
         is_sleeping = true;
 
         startTimer(10 * 1000 * 1000);
-      }
     }
-
-  }
 
 
   // Forward data from HW Serial to BLEUART
@@ -257,10 +265,11 @@ void loop()
   if(is_sleeping) {
     Serial.println("good night!!!!!");
     delay(100);
+    //systemOff(PIN_BUTTON1, WAKE_LOW_PIN);
   }
   while(is_sleeping) {
-    __WFE();
     __SEV();
+    __WFE();
     __WFE();
   }
 
