@@ -20,8 +20,8 @@ I2Cでサーマルカメラ(MLX90640)のデータ取得後、BLEとSerialに出�
 
 I2Cの配線は以下(variantファイル参照。)
 
-SCL: p0_19  
-SDA: p0_23
+SCL: p0_23  
+SDA: p0_19
 
 ## Sleepについて
 
