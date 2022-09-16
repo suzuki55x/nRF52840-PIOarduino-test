@@ -236,7 +236,7 @@ void loop()
         delay(1000);
         is_sleeping = true;
 
-        startTimer(10 * 1000 * 1000);
+        startTimer(30 * 1000 * 1000);
     }
 
 
