@@ -24,6 +24,8 @@ const byte MLX90640_address = 0x33; //Default 7-bit unshifted address of the MLX
 
 #define TA_SHIFT 8 //Default shift for MLX90640 in open air
 
+#define DEBUG true
+
 static float mlx90640To[768];
 paramsMLX90640 mlx90640;
 
@@ -81,9 +83,19 @@ void startTimer(unsigned long us) {
 
 void setup()
 {
-  Serial.begin(115200);
-  Wire.begin();
+  Serial.begin(9600);
+  Serial.println("---------------------------\n");
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(PIN_D8, OUTPUT);
+
+  digitalWrite(PIN_D8, HIGH);// I2C module Power ON
+  delay(100);// Init I2C module
+
+  Wire.begin();// Init I2C lib
   Wire.setClock(400000); //Increase I2C clock speed to 400kHz
+
+
 
 #if CFG_DEBUG
   // Blocking wait for connection when debug mode is enabled via IDE
@@ -93,6 +105,7 @@ void setup()
   Serial.println("Bluefruit52 BLEUART Example");
   Serial.println("---------------------------\n");
 
+#if DEBUG
   if (isConnected() == false)
   {
     Serial.println("MLX90640 not detected at default I2C address. Please check wiring. Freezing.");
@@ -110,6 +123,7 @@ void setup()
   status = MLX90640_ExtractParameters(eeMLX90640, &mlx90640);
   if (status != 0)
     Serial.println("Parameter extraction failed");
+#endif
 
   //Once params are extracted, we can release eeMLX90640 array
 
@@ -181,7 +195,9 @@ void startAdv(void)
 
 void loop()
 {
+  Serial.println("---------------------------\n");
   digitalWrite(LED_BUILTIN, LOW);
+#if DEBUG
 
   for (byte x = 0 ; x < 2 ; x++) //Read both subpages
   {
@@ -206,12 +222,12 @@ void loop()
   {
     char buf[17];
 
-    //Serial.print("Pixel ");
-    //Serial.print(x);
+    Serial.print("Pixel ");
+    Serial.print(x);
     //Serial.print(": ");
     //Serial.print(mlx90640To[x], 2);
     //Serial.print("C");
-    //Serial.println();
+    Serial.println();
 
     snprintf(buf, sizeof(buf), "pix %03d: %5.2fC\n", x, mlx90640To[x]);
     Serial.print(buf);
@@ -225,7 +241,7 @@ void loop()
         delay(1000);
         is_sleeping = true;
 
-        startTimer(30 * 1000 * 1000);
+        //startTimer(30 * 1000 * 1000);
       }
     }
 
@@ -242,27 +258,28 @@ void loop()
   //  int count = Serial.readBytes(buf, sizeof(buf));
   //  bleuart.write( buf, count );
   //}
+#endif
 
   // Forward from BLEUART to HW Serial
-  while ( bleuart.available() )
-  {
-    uint8_t ch;
-    ch = (uint8_t) bleuart.read();
-    Serial.write(ch);
-  }
+  //while ( bleuart.available() )
+  //{
+  //  uint8_t ch;
+  //  ch = (uint8_t) bleuart.read();
+  //  Serial.write(ch);
+  //}
 
   delay(1000);
   digitalWrite(LED_BUILTIN, HIGH);
   //gotoSleep();
-  if(is_sleeping) {
-    Serial.println("good night!!!!!");
-    delay(100);
-  }
-  while(is_sleeping) {
-    __WFE();
-    __SEV();
-    __WFE();
-  }
+  //if(is_sleeping) {
+  //  Serial.println("good night!!!!!");
+  //  delay(100);
+  //}
+  //while(is_sleeping) {
+  //  __WFE();
+  //  __SEV();
+  //  __WFE();
+  //}
 
 }
 
