@@ -123,7 +123,6 @@ void setup()
   Serial.begin(9600);
   Serial.println("---------------------------\n");
 
-  pinMode(LED_BUILTIN, OUTPUT);
   pinMode(PIN_D8, OUTPUT);
 
 #if CFG_DEBUG
