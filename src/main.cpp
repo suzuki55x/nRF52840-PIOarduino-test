@@ -116,6 +116,8 @@ void endThermal() {
   Wire.end();
   digitalWrite(PIN_D8, LOW);// I2C module Power OFF
 
+  pinMode(PIN_WIRE_SDA, INPUT);  // remove internal pullup
+  pinMode(PIN_WIRE_SCL, INPUT);  // remove internal pullup
 }
 
 void setup()
