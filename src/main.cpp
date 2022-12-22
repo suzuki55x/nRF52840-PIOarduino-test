@@ -25,7 +25,7 @@ const byte MLX90640_address = 0x33; //Default 7-bit unshifted address of the MLX
 #define TA_SHIFT 8 //Default shift for MLX90640 in open air
 #define SLEEP_SEC 15
 
-#define DEBUG true
+#define DEBUG false
 
 static float mlx90640To[768];
 paramsMLX90640 mlx90640;
@@ -85,6 +85,7 @@ void startTimer(unsigned long us) {
 void initThermal() {
   digitalWrite(PIN_D8, HIGH);// I2C module Power ON
   delay(100);// Init I2C module
+#if DEBUG
 
   Wire.begin();// Init I2C lib
   Wire.setClock(400000); //Increase I2C clock speed to 400kHz
@@ -96,7 +97,6 @@ void initThermal() {
   }
   Serial.println("MLX90640 online!");
 
-#if DEBUG
 
   //Get device parameters - We only have to do this once
   int status;
@@ -113,7 +113,9 @@ void initThermal() {
 
 void endThermal() {
 
+#if DEBUG
   Wire.end();
+#endif
   digitalWrite(PIN_D8, LOW);// I2C module Power OFF
 
   pinMode(PIN_WIRE_SDA, INPUT);  // remove internal pullup
@@ -208,7 +210,7 @@ void loop()
   Serial.println("---------------------------\n");
 
   initThermal();
-
+#if DEBUG
   for (byte x = 0 ; x < 2 ; x++) //Read both subpages
   {
     uint16_t mlx90640Frame[834];
@@ -227,9 +229,11 @@ void loop()
 
     MLX90640_CalculateTo(mlx90640Frame, &mlx90640, emissivity, tr, mlx90640To);
   }
+#endif
 
   endThermal();
 
+#if DEBUG
   for (int x = 0 ; x < sizeof(mlx90640To) / sizeof(mlx90640To[0]); x++)
   {
     char buf[17];
@@ -264,6 +268,11 @@ void loop()
     }
 
   }
+#else
+        is_sleeping = true;
+
+        startTimer(SLEEP_SEC * 1000 * 1000);
+#endif
 
 
   // Forward data from HW Serial to BLEUART
