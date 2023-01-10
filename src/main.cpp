@@ -39,7 +39,7 @@ BLEUart bleuart; // uart over ble
 BLEBas blebas;   // battery
 
 #define WAKE_LOW_PIN PIN_BUTTON1
-//#define WAKE_HIGH_PIN PIN_A1
+// #define WAKE_HIGH_PIN PIN_A1
 
 #define SLEEPING_DELAY 5000 // sleep after 30 seconds of blinking
 
@@ -119,8 +119,8 @@ void initThermal()
 #endif
 
   status = MLX90640_ExtractParameters(eeMLX90640, &mlx90640);
-  if (status != 0)
 #if PRINT_DEBUG
+  if (status != 0)
     Serial.println("Parameter extraction failed");
 #endif
 #endif
