@@ -33,7 +33,7 @@ const byte MLX90640_address = 0x33; // Default 7-bit unshifted address of the ML
 
 #define PRINT_DEBUG false // falseでUSBシリアル削除
 
-#define ENABLE_BLE true // BLE出力ON
+#define ENABLE_BLE false // BLE出力ON
 
 #define ENABLE_SYS_OFF true          // SYSTEM OFF Sleepモード
 #define SYS_OFF_WAKE_UP_FALLING true // SYSTEM OFF wakeup highかlowか
@@ -153,7 +153,10 @@ void setup()
 #if PRINT_DEBUG
 #else
   // UART off
-  NRF_UART0->ENABLE = 0;
+  NRF_UARTE0->TASKS_STOPRX = 1;
+  NRF_UARTE0->TASKS_STOPTX = 1;
+  NRF_UARTE0->ENABLE = ((uint32_t)UARTE_ENABLE_ENABLE_Disabled << UARTE_ENABLE_ENABLE_Pos);
+
 #endif
 
 #if ENABLE_SYS_OFF
