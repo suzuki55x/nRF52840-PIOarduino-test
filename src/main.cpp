@@ -31,6 +31,10 @@ const byte MLX90640_address = 0x33; // Default 7-bit unshifted address of the ML
 
 #define ENABLE_BLE false // BLE出力ON
 
+#define ENABLE_SYS_OFF true // SYSTEM OFF Sleepモード
+
+#define ENABLE_LOWPWR true // power mode を LOWPWRに設定
+
 static float mlx90640To[768];
 paramsMLX90640 mlx90640;
 
@@ -143,7 +147,10 @@ void endThermal()
 void setup()
 {
 
-  // sd_power_mode_set(NRF_POWER_MODE_LOWPWR);// CPUスリープ中のパワーモード
+#if ENABLE_LOWPWR
+  sd_power_mode_set(NRF_POWER_MODE_LOWPWR); // CPUスリープ中のパワーモード
+#endif
+
 #if PRINT_DEBUG
 #else
   // UART off
@@ -363,6 +370,7 @@ void loop()
   }
   while (is_sleeping)
   {
+    // sd_app_evt_wait();
     __WFE();
     __SEV();
     __WFE();
