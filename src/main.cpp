@@ -23,17 +23,27 @@
 const byte MLX90640_address = 0x33; // Default 7-bit unshifted address of the MLX90640
 
 #define TA_SHIFT 8 // Default shift for MLX90640 in open air
-#define SLEEP_SEC 15
+
+/**
+ * ここから設定系
+ */
+#define SLEEP_SEC 15 // System ON sleepの秒数
 
 #define DEBUG true // falseでI2C処理削除
 
 #define PRINT_DEBUG false // falseでUSBシリアル削除
 
-#define ENABLE_BLE false // BLE出力ON
+#define ENABLE_BLE true // BLE出力ON
 
-#define ENABLE_SYS_OFF true // SYSTEM OFF Sleepモード
+#define ENABLE_SYS_OFF true          // SYSTEM OFF Sleepモード
+#define SYS_OFF_WAKE_UP_FALLING true // SYSTEM OFF wakeup highかlowか
 
-#define ENABLE_LOWPWR true // power mode を LOWPWRに設定
+#define ENABLE_LOWPWR false // power mode を LOWPWRに設定(system off優先)
+
+#define SOFT_DEVICE_FUNC_NO_USE true // softdevice関数を使わない（System offなど動作しないためtrue推奨）
+/**
+ * ここまで設定系
+ */
 
 static float mlx90640To[768];
 paramsMLX90640 mlx90640;
@@ -44,14 +54,7 @@ BLEDis bledis;   // device information
 BLEUart bleuart; // uart over ble
 BLEBas blebas;   // battery
 
-#define WAKE_LOW_PIN PIN_BUTTON1
-// #define WAKE_HIGH_PIN PIN_A1
-
-#define SLEEPING_DELAY 5000 // sleep after 30 seconds of blinking
-
 void startAdv(void);
-void gotoSleep(unsigned long time);
-void gotoSystemOnSleep(unsigned long time);
 void connect_callback(uint16_t conn_handle);
 void disconnect_callback(uint16_t conn_handle, uint8_t reason);
 boolean isConnected();
@@ -147,14 +150,26 @@ void endThermal()
 void setup()
 {
 
-#if ENABLE_LOWPWR
-  sd_power_mode_set(NRF_POWER_MODE_LOWPWR); // CPUスリープ中のパワーモード
-#endif
-
 #if PRINT_DEBUG
 #else
   // UART off
   NRF_UART0->ENABLE = 0;
+#endif
+
+#if ENABLE_SYS_OFF
+  pinMode(PIN_D3, INPUT);
+
+  // bitmask
+  NRF_GPIO->PIN_CNF[PIN_D3] &= ~((uint32_t)GPIO_PIN_CNF_SENSE_Msk);
+
+#if SYS_OFF_WAKE_UP_FALLING
+  // FALLINGで起床
+  NRF_GPIO->PIN_CNF[PIN_D3] |= ((uint32_t)GPIO_PIN_CNF_SENSE_Low << GPIO_PIN_CNF_SENSE_Pos);
+#else
+  // RISINGで起床
+  NRF_GPIO->PIN_CNF[PIN_D3] |= ((uint32_t)GPIO_PIN_CNF_SENSE_High << GPIO_PIN_CNF_SENSE_Pos);
+#endif
+
 #endif
 
 #if PRINT_DEBUG
@@ -327,8 +342,10 @@ void loop()
     if (x == (sizeof(mlx90640To) / sizeof(mlx90640To[0])) - 1)
     {
       is_sleeping = true;
-
+#if ENABLE_SYS_OFF
+#else
       startTimer(SLEEP_SEC * 1000 * 1000);
+#endif
     }
 #endif
   }
@@ -359,8 +376,8 @@ void loop()
   //}
 #endif
 
-  delay(1000);
-  // gotoSleep();
+  // delay(1000);
+  //  gotoSleep();
   if (is_sleeping)
   {
 #if PRINT_DEBUG
@@ -368,6 +385,19 @@ void loop()
 #endif
     delay(100);
   }
+#if ENABLE_SYS_OFF
+#if SOFT_DEVICE_FUNC_NO_USE
+  NRF_POWER->SYSTEMOFF = 1;
+#else
+  sd_power_system_off();
+#endif
+#elif ENABLE_LOWPWR
+#if SOFT_DEVICE_FUNC_NO_USE
+  NRF_POWER->TASKS_LOWPWR = 1;
+#else
+  sd_power_mode_set(NRF_POWER_MODE_LOWPWR); // CPUスリープ中のパワーモード
+#endif
+#else
   while (is_sleeping)
   {
     // sd_app_evt_wait();
@@ -375,6 +405,7 @@ void loop()
     __SEV();
     __WFE();
   }
+#endif
 }
 
 // callback invoked when central connects

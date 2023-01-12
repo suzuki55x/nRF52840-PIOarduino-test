@@ -112,12 +112,14 @@ extern "C"
 // #define PIN_WIRE_SCL         (3)
 #define PIN_WIRE_SDA (6)
 #define PIN_WIRE_SCL (7)
-#define PIN_D8 (8)
 
 // #define PIN_WIRE1_SDA        (5)
 // #define PIN_WIRE1_SCL        (6)
-#define PIN_WIRE1_SDA (6)
-#define PIN_WIRE1_SCL (7)
+#define PIN_WIRE1_SDA (4)
+#define PIN_WIRE1_SCL (5)
+
+#define PIN_D3 (3)
+#define PIN_D8 (8)
 
 #ifdef __cplusplus
 }
