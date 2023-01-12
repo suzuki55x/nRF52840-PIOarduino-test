@@ -29,6 +29,8 @@ const byte MLX90640_address = 0x33; // Default 7-bit unshifted address of the ML
 
 #define PRINT_DEBUG false // falseでUSBシリアル削除
 
+#define ENABLE_BLE false // BLE出力ON
+
 static float mlx90640To[768];
 paramsMLX90640 mlx90640;
 
@@ -140,6 +142,14 @@ void endThermal()
 
 void setup()
 {
+
+  // sd_power_mode_set(NRF_POWER_MODE_LOWPWR);// CPUスリープ中のパワーモード
+#if PRINT_DEBUG
+#else
+  // UART off
+  NRF_UART0->ENABLE = 0;
+#endif
+
 #if PRINT_DEBUG
   Serial.begin(9600);
   Serial.println("---------------------------\n");
@@ -160,10 +170,11 @@ void setup()
 
   // Once params are extracted, we can release eeMLX90640 array
 
+#if ENABLE_BLE
   // Setup the BLE LED to be enabled on CONNECT
   // Note: This is actually the default behavior, but provided
   // here in case you want to control this LED manually via PIN 19
-  Bluefruit.autoConnLed(true);
+  Bluefruit.autoConnLed(false);
 
   // Config the peripheral connection with maximum bandwidth
   // more SRAM required by SoftDevice
@@ -193,6 +204,7 @@ void setup()
 
   // Set up and start advertising
   startAdv();
+#endif
 
 #if PRINT_DEBUG
   Serial.println("Please use Adafruit's Bluefruit LE app to connect in UART mode");
@@ -280,6 +292,7 @@ void loop()
     Serial.print(buf);
 #endif
 
+#if ENABLE_BLE
     if (is_connected_ble)
     {
 
@@ -303,6 +316,14 @@ void loop()
         startTimer(SLEEP_SEC * 1000 * 1000);
       }
     }
+#else
+    if (x == (sizeof(mlx90640To) / sizeof(mlx90640To[0])) - 1)
+    {
+      is_sleeping = true;
+
+      startTimer(SLEEP_SEC * 1000 * 1000);
+    }
+#endif
   }
 #else
   is_sleeping = true;
